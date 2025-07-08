@@ -128,7 +128,7 @@ func handleSummary(w http.ResponseWriter, r *http.Request) {
 		}
 		if (fromStr == "" || !t.Before(from)) && (toStr == "" || !t.After(to)) {
 			key := "default"
-			if p.CorrelationID != "" && p.CorrelationID[0] == 'F' { // fallback marker (ajuste se necessário)
+			if p.CorrelationID != "" && p.CorrelationID[0] == 'F' { // fallback marker
 				key = "fallback"
 			}
 			if p.Amount > 0 {
