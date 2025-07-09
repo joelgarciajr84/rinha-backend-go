@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   app1:
-    build: ./app
+    build: .
     networks:
       - backend
       - payment-processor
@@ -16,7 +16,7 @@ services:
           memory: "300MB"
 
   app2:
-    build: ./app
+    build: .
     networks:
       - backend
       - payment-processor

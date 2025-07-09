@@ -1,17 +1,17 @@
 package domain
 
 type Payment struct {
-	CorrelationID string
-	Amount        float64
-	RequestedAt   string
+	CorrelationID string  `json:"correlationId"`
+	Amount        float64 `json:"amount"`
+	RequestedAt   string  `json:"requestedAt"`
 }
 
 type ProcessorStats struct {
-	TotalRequests int
-	TotalAmount   float64
+	TotalRequests int     `json:"totalRequests"`
+	TotalAmount   float64 `json:"totalAmount"`
 }
 
 type Summary struct {
-	Default  ProcessorStats
-	Fallback ProcessorStats
+	Default  ProcessorStats `json:"default"`
+	Fallback ProcessorStats `json:"fallback"`
 }
