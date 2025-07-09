@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -67,7 +66,6 @@ func (h *PaymentHandler) HandleSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	summary := h.Storage.GetSummary(from, to)
-	fmt.Print("Summary: ", summary)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(summary)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"time"
 
 	"rinha/internal/core/domain"
 	"rinha/internal/core/service"
@@ -21,9 +22,17 @@ func main() {
 	memStorage := storage.NewMemoryStorage()
 	healthChecker := health.NewChecker()
 
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        1000,
+			MaxIdleConnsPerHost: 1000,
+		},
+	}
+
 	sender := func(url string, p domain.Payment) error {
 		body, _ := json.Marshal(p)
-		resp, err := http.Post(url+"/payments", "application/json", bytes.NewReader(body))
+		resp, err := client.Post(url+"/payments", "application/json", bytes.NewReader(body))
 		if err != nil || resp.StatusCode >= 500 {
 			return err
 		}

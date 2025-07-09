@@ -8,7 +8,7 @@ import (
 )
 
 type MemoryStorage struct {
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	processed map[string]struct{}
 	payments  []domain.Payment
 	stats     map[string]*domain.ProcessorStats
@@ -31,8 +31,8 @@ func (m *MemoryStorage) SavePayment(p domain.Payment, processor string) {
 }
 
 func (m *MemoryStorage) AlreadyProcessed(id string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	_, exists := m.processed[id]
 	return exists
 }
@@ -44,8 +44,8 @@ func (m *MemoryStorage) MarkProcessed(id string) {
 }
 
 func (m *MemoryStorage) GetSummary(from, to *time.Time) domain.Summary {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	summary := domain.Summary{
 		Default:  domain.ProcessorStats{},
 		Fallback: domain.ProcessorStats{},

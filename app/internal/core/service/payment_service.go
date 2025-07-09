@@ -30,12 +30,19 @@ func NewPaymentService(storage Storage, hc HealthChecker, sender func(string, do
 }
 
 func (s *PaymentService) ProcessPayment(p domain.Payment) {
-	processor := s.pickProcessor()
-	s.sender(processor, p)
-
-	if processor == s.defaultURL && !s.healthChecker.IsHealthy(s.defaultURL) {
-		s.sender(s.fallbackURL, p)
-	}
+	go func() {
+		err := s.sender(s.defaultURL, p)
+		if err == nil {
+			s.storage.SavePayment(p, "default")
+			return
+		}
+		// Tenta fallback se default falhar
+		err2 := s.sender(s.fallbackURL, p)
+		if err2 == nil {
+			s.storage.SavePayment(p, "fallback")
+		}
+		// Se ambos falharem, não salva
+	}()
 }
 
 func (s *PaymentService) pickProcessor() string {
