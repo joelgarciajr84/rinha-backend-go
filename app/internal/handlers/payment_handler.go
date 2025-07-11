@@ -7,6 +7,7 @@ import (
 
 	"rinha/internal/core/domain"
 	"rinha/internal/core/service"
+	"rinha/internal/infra/storage"
 )
 
 type PaymentHandler struct {
@@ -63,6 +64,14 @@ func (h *PaymentHandler) HandleSummary(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			to = &t
 		}
+	}
+
+	// Usa summary consistente dos processadores externos
+	if redisStore, ok := h.Storage.(*storage.RedisStorage); ok {
+		summary := redisStore.GetConsistentSummary(from, to)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(summary)
+		return
 	}
 
 	summary := h.Storage.GetSummary(from, to)

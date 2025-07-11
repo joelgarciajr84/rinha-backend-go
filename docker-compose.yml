@@ -43,6 +43,18 @@ services:
           cpus: "0.1"
           memory: "50MB"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: "50MB"
+
 networks:
   backend:
     driver: bridge
