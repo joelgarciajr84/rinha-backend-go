@@ -3,11 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"rinha/internal/core/domain"
 	"rinha/internal/core/service"
-	"rinha/internal/infra/storage"
 )
 
 type PaymentHandler struct {
@@ -16,11 +14,15 @@ type PaymentHandler struct {
 }
 
 func NewHandler(s service.PaymentService, store service.Storage) *PaymentHandler {
-	return &PaymentHandler{Service: s, Storage: store}
+	return &PaymentHandler{
+		Service: s,
+		Storage: store,
+	}
 }
 
 func (h *PaymentHandler) HandlePayment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -41,40 +43,23 @@ func (h *PaymentHandler) HandlePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.RequestedAt = time.Now().UTC().Format(time.RFC3339Nano)
-	h.Storage.MarkProcessed(p.CorrelationID)
-	h.Service.ProcessPayment(p)
+	if err := h.Service.ProcessPayment(p); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
 
 func (h *PaymentHandler) HandleSummary(w http.ResponseWriter, r *http.Request) {
-	fromStr := r.URL.Query().Get("from")
-	toStr := r.URL.Query().Get("to")
-
-	var from, to *time.Time
-	if fromStr != "" {
-		t, err := time.Parse(time.RFC3339, fromStr)
-		if err == nil {
-			from = &t
-		}
-	}
-	if toStr != "" {
-		t, err := time.Parse(time.RFC3339, toStr)
-		if err == nil {
-			to = &t
-		}
-	}
-
-	// Usa summary consistente dos processadores externos
-	if redisStore, ok := h.Storage.(*storage.RedisStorage); ok {
-		summary := redisStore.GetConsistentSummary(from, to)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(summary)
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	summary := h.Storage.GetSummary(from, to)
+	summary := h.Storage.GetSummary(nil, nil)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(summary)
 }

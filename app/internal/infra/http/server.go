@@ -1,4 +1,4 @@
-package httpserver
+package http
 
 import (
 	"log"
@@ -13,13 +13,15 @@ func StartServer(handler *handlers.PaymentHandler) {
 	mux.HandleFunc("/payments-summary", handler.HandleSummary)
 
 	srv := &http.Server{
-		Addr:         ":9999",
-		Handler:      mux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              ":9999",
+		Handler:           mux,
+		ReadTimeout:       2 * time.Second,
+		WriteTimeout:      3 * time.Second,
+		ReadHeaderTimeout: 1 * time.Second,
+		IdleTimeout:       30 * time.Second,
+		MaxHeaderBytes:    1 << 16,
 	}
 
-	log.Println("Listening on :9999")
+	log.Println("Servidor rodando na porta :9999")
 	log.Fatal(srv.ListenAndServe())
 }

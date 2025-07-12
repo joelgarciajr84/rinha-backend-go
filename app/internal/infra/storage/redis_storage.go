@@ -2,7 +2,8 @@ package storage
 
 import (
 	"context"
-	"strconv"
+	"fmt"
+	"log"
 	"time"
 
 	"rinha/internal/core/domain"
@@ -12,74 +13,114 @@ import (
 
 type RedisStorage struct {
 	client *redis.Client
+	ctx    context.Context
 }
 
 func NewRedisStorage(addr string) *RedisStorage {
 	client := redis.NewClient(&redis.Options{
-		Addr: addr,
-		DB:   0,
+		Addr:            addr,
+		DB:              0,
+		PoolSize:        100,
+		MinIdleConns:    20,
+		MaxIdleConns:    50,
+		ConnMaxIdleTime: 5 * time.Minute,
+		DialTimeout:     500 * time.Millisecond,
+		ReadTimeout:     300 * time.Millisecond,
+		WriteTimeout:    300 * time.Millisecond,
+		MaxRetries:      2,
+		MinRetryBackoff: 8 * time.Millisecond,
+		MaxRetryBackoff: 50 * time.Millisecond,
 	})
-	return &RedisStorage{client: client}
+
+	ctx := context.Background()
+	if err := client.Ping(ctx).Err(); err != nil {
+		log.Printf("Aviso: Redis não disponível: %v", err)
+	}
+
+	return &RedisStorage{
+		client: client,
+		ctx:    ctx,
+	}
 }
 
 func (r *RedisStorage) SavePayment(p domain.Payment, processor string) {
-	ctx := context.Background()
-	pipe := r.client.TxPipeline()
-	pipe.RPush(ctx, "payments", marshalPayment(p, processor))
-	pipe.Incr(ctx, "stats:"+processor+":totalRequests")
-	pipe.IncrByFloat(ctx, "stats:"+processor+":totalAmount", p.Amount)
-	pipe.Exec(ctx)
+	ctx, cancel := context.WithTimeout(r.ctx, 500*time.Millisecond)
+	defer cancel()
+
+	txf := func(tx *redis.Tx) error {
+		exists, err := tx.Exists(ctx, "processed:"+p.CorrelationID).Result()
+		if err != nil {
+			return err
+		}
+		if exists == 1 {
+			return fmt.Errorf("already processed")
+		}
+
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.Incr(ctx, "stats:"+processor+":totalRequests")
+			pipe.IncrByFloat(ctx, "stats:"+processor+":totalAmount", p.Amount)
+			pipe.Set(ctx, "processed:"+p.CorrelationID, 1, 30*time.Minute)
+			return nil
+		})
+		return err
+	}
+
+	for i := 0; i < 3; i++ {
+		err := r.client.Watch(ctx, txf, "processed:"+p.CorrelationID)
+		if err == nil {
+			return
+		}
+		if err == redis.TxFailedErr {
+			continue
+		}
+		log.Printf("Erro salvando pagamento %s: %v", p.CorrelationID, err)
+		return
+	}
+
+	log.Printf("Falha ao salvar pagamento %s após 3 tentativas", p.CorrelationID)
 }
 
 func (r *RedisStorage) AlreadyProcessed(id string) bool {
-	ctx := context.Background()
-	res, _ := r.client.Exists(ctx, "processed:"+id).Result()
-	return res == 1
-}
+	ctx, cancel := context.WithTimeout(r.ctx, 100*time.Millisecond)
+	defer cancel()
 
-func (r *RedisStorage) MarkProcessed(id string) {
-	ctx := context.Background()
-	r.client.Set(ctx, "processed:"+id, 1, 0)
-}
-
-func (r *RedisStorage) UnmarkProcessing(id string) {
-	ctx := context.Background()
-	r.client.Del(ctx, "processed:"+id)
-}
-
-// TryMarkProcessing faz SETNX e retorna true se conseguiu marcar, false se já processado
-func (r *RedisStorage) TryMarkProcessing(id string) bool {
-	ctx := context.Background()
-	res, _ := r.client.SetNX(ctx, "processed:"+id, 1, 0).Result()
-	return res
+	exists, err := r.client.Exists(ctx, "processed:"+id).Result()
+	if err != nil {
+		return false
+	}
+	return exists == 1
 }
 
 func (r *RedisStorage) GetSummary(from, to *time.Time) domain.Summary {
-	ctx := context.Background()
-	defaultReq, _ := r.client.Get(ctx, "stats:default:totalRequests").Int()
-	defaultAmt, _ := r.client.Get(ctx, "stats:default:totalAmount").Float64()
-	fallbackReq, _ := r.client.Get(ctx, "stats:fallback:totalRequests").Int()
-	fallbackAmt, _ := r.client.Get(ctx, "stats:fallback:totalAmount").Float64()
-	return domain.Summary{
-		Default:  domain.ProcessorStats{TotalRequests: defaultReq, TotalAmount: defaultAmt},
-		Fallback: domain.ProcessorStats{TotalRequests: fallbackReq, TotalAmount: fallbackAmt},
-	}
-}
+	ctx, cancel := context.WithTimeout(r.ctx, 200*time.Millisecond)
+	defer cancel()
 
-// Busca o summary real dos Payment Processors externos
-func (r *RedisStorage) GetConsistentSummary(from, to *time.Time) domain.Summary {
-	ext, err := GetProcessorSummary()
+	pipe := r.client.Pipeline()
+
+	defaultReqCmd := pipe.Get(ctx, "stats:default:totalRequests")
+	defaultAmtCmd := pipe.Get(ctx, "stats:default:totalAmount")
+	fallbackReqCmd := pipe.Get(ctx, "stats:fallback:totalRequests")
+	fallbackAmtCmd := pipe.Get(ctx, "stats:fallback:totalAmount")
+
+	_, err := pipe.Exec(ctx)
 	if err != nil {
-		// fallback para o summary local se falhar
-		return r.GetSummary(from, to)
+		log.Printf("Erro buscando summary: %v", err)
+		return domain.Summary{}
 	}
-	return domain.Summary{
-		Default:  domain.ProcessorStats{TotalRequests: ext.Default.TotalRequests, TotalAmount: ext.Default.TotalAmount},
-		Fallback: domain.ProcessorStats{TotalRequests: ext.Fallback.TotalRequests, TotalAmount: ext.Fallback.TotalAmount},
-	}
-}
 
-// Helper para serializar pagamento (pode ser melhorado para JSON se necessário)
-func marshalPayment(p domain.Payment, processor string) string {
-	return p.CorrelationID + "," + strconv.FormatFloat(p.Amount, 'f', 2, 64) + "," + p.RequestedAt + "," + processor
+	defaultReq, _ := defaultReqCmd.Int()
+	defaultAmt, _ := defaultAmtCmd.Float64()
+	fallbackReq, _ := fallbackReqCmd.Int()
+	fallbackAmt, _ := fallbackAmtCmd.Float64()
+
+	return domain.Summary{
+		Default: domain.ProcessorStats{
+			TotalRequests: defaultReq,
+			TotalAmount:   defaultAmt,
+		},
+		Fallback: domain.ProcessorStats{
+			TotalRequests: fallbackReq,
+			TotalAmount:   fallbackAmt,
+		},
+	}
 }

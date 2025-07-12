@@ -9,6 +9,9 @@ services:
     environment:
       - PAYMENT_PROCESSOR_URL_DEFAULT=http://payment-processor-default:8080
       - PAYMENT_PROCESSOR_URL_FALLBACK=http://payment-processor-fallback:8080
+      - X_RINHA_TOKEN=123
+      - REDIS_ADDR=redis:6379
+
     deploy:
       resources:
         limits:
@@ -23,6 +26,9 @@ services:
     environment:
       - PAYMENT_PROCESSOR_URL_DEFAULT=http://payment-processor-default:8080
       - PAYMENT_PROCESSOR_URL_FALLBACK=http://payment-processor-fallback:8080
+      - X_RINHA_TOKEN=123
+      - REDIS_ADDR=redis:6379
+
     deploy:
       resources:
         limits:

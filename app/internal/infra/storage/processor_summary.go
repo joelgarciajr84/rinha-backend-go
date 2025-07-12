@@ -2,8 +2,10 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
+	"time"
 )
 
 type ProcessorSummary struct {
@@ -20,14 +22,20 @@ func GetProcessorSummary() (ExternalSummary, error) {
 	urlDefault := os.Getenv("PAYMENT_PROCESSOR_URL_DEFAULT")
 	urlFallback := os.Getenv("PAYMENT_PROCESSOR_URL_FALLBACK")
 
+	if urlDefault == "" || urlFallback == "" {
+		return ExternalSummary{}, errors.New("missing payment processor URLs in environment variables")
+	}
+
 	defaultSummary, err := fetchSummary(urlDefault)
 	if err != nil {
 		return ExternalSummary{}, err
 	}
+
 	fallbackSummary, err := fetchSummary(urlFallback)
 	if err != nil {
 		return ExternalSummary{}, err
 	}
+
 	return ExternalSummary{
 		Default:  defaultSummary,
 		Fallback: fallbackSummary,
@@ -35,12 +43,24 @@ func GetProcessorSummary() (ExternalSummary, error) {
 }
 
 func fetchSummary(baseURL string) (ProcessorSummary, error) {
-	resp, err := http.Get(baseURL + "/admin/payments-summary")
+	client := &http.Client{
+		Timeout: 1 * time.Second,
+	}
+
+	resp, err := client.Get(baseURL + "/admin/payments-summary")
 	if err != nil {
 		return ProcessorSummary{}, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ProcessorSummary{}, errors.New("non-200 response from payment processor summary endpoint")
+	}
+
 	var s ProcessorSummary
-	json.NewDecoder(resp.Body).Decode(&s)
+	if err := json.NewDecoder(resp.Body).Decode(&s); err != nil {
+		return ProcessorSummary{}, err
+	}
+
 	return s, nil
 }

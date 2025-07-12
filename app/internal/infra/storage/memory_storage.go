@@ -17,17 +17,31 @@ type MemoryStorage struct {
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
 		processed: make(map[string]struct{}),
-		stats:     map[string]*domain.ProcessorStats{"default": {}, "fallback": {}},
+		stats: map[string]*domain.ProcessorStats{
+			"default":  &domain.ProcessorStats{},
+			"fallback": &domain.ProcessorStats{},
+		},
+		payments: make([]domain.Payment, 0, 10000), // pré-aloca espaço para evitar crescimento contínuo
 	}
 }
 
 func (m *MemoryStorage) SavePayment(p domain.Payment, processor string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if _, exists := m.processed[p.CorrelationID]; exists {
+		// Já processado, evita duplicação
+		return
+	}
+
+	m.processed[p.CorrelationID] = struct{}{}
 	m.payments = append(m.payments, p)
-	s := m.stats[processor]
-	s.TotalRequests++
-	s.TotalAmount += p.Amount
+
+	// Atualiza estatísticas
+	if stat, ok := m.stats[processor]; ok {
+		stat.TotalRequests++
+		stat.TotalAmount += p.Amount
+	}
 }
 
 func (m *MemoryStorage) AlreadyProcessed(id string) bool {
@@ -37,6 +51,7 @@ func (m *MemoryStorage) AlreadyProcessed(id string) bool {
 	return exists
 }
 
+// Marca como processado separadamente (caso queira uso explícito)
 func (m *MemoryStorage) MarkProcessed(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -46,24 +61,33 @@ func (m *MemoryStorage) MarkProcessed(id string) {
 func (m *MemoryStorage) GetSummary(from, to *time.Time) domain.Summary {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
 	summary := domain.Summary{
 		Default:  domain.ProcessorStats{},
 		Fallback: domain.ProcessorStats{},
 	}
+
 	for _, p := range m.payments {
-		t, _ := time.Parse(time.RFC3339Nano, p.RequestedAt)
+		t, err := time.Parse(time.RFC3339Nano, p.RequestedAt)
+		if err != nil {
+			continue
+		}
 		if (from == nil || !t.Before(*from)) && (to == nil || !t.After(*to)) {
-			key := "default"
-			if p.CorrelationID[0] == 'F' {
-				key = "fallback"
+			processor := "default"
+			// Se quiser, a chave do processor pode vir do domain.Payment ou ser passada aqui
+			// Exemplo: se CorrelationID começar com F ou outro critério
+			if len(p.CorrelationID) > 0 && p.CorrelationID[0] == 'F' {
+				processor = "fallback"
 			}
-			s := &summary.Default
-			if key == "fallback" {
-				s = &summary.Fallback
+
+			stat := &summary.Default
+			if processor == "fallback" {
+				stat = &summary.Fallback
 			}
-			s.TotalRequests++
-			s.TotalAmount += p.Amount
+			stat.TotalRequests++
+			stat.TotalAmount += p.Amount
 		}
 	}
+
 	return summary
 }

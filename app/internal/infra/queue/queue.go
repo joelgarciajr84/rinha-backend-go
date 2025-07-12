@@ -2,34 +2,59 @@ package queue
 
 import (
 	"rinha/internal/core/domain"
-	"sync"
+	"rinha/internal/core/service"
+	"sync/atomic"
 )
 
-type PaymentTask struct {
-	Payment   domain.Payment
-	Processor string // "default" ou "fallback"
-}
-
 type PaymentQueue struct {
-	ch chan PaymentTask
-	wg sync.WaitGroup
+	storage service.Storage
+	length  int64
+	closed  int32
 }
 
-func NewPaymentQueue(buffer int) *PaymentQueue {
+func NewPaymentQueue(storage service.Storage) *PaymentQueue {
 	return &PaymentQueue{
-		ch: make(chan PaymentTask, buffer),
+		storage: storage,
 	}
 }
 
-func (q *PaymentQueue) Enqueue(task PaymentTask) {
-	q.ch <- task
+func (q *PaymentQueue) Enqueue(p domain.Payment) error {
+	err := q.storage.EnqueuePaymentTask(p)
+	if err == nil {
+		atomic.AddInt64(&q.length, 1)
+	}
+	return err
 }
 
-func (q *PaymentQueue) Dequeue() <-chan PaymentTask {
-	return q.ch
+func (q *PaymentQueue) Dequeue() <-chan domain.Payment {
+	ch := make(chan domain.Payment)
+
+	go func() {
+		defer close(ch)
+		for {
+			p, err := q.storage.DequeuePaymentTask()
+			if err != nil {
+				// opcional: log do erro e continue tentando
+				continue
+			}
+			if p == nil {
+				// fila vazia, espera um pouco para não busy loop
+				// pode colocar time.Sleep(50 * time.Millisecond)
+				continue
+			}
+			ch <- *p
+			atomic.AddInt64(&q.length, -1)
+		}
+	}()
+
+	return ch
+}
+
+func (q *PaymentQueue) Length() int64 {
+	return atomic.LoadInt64(&q.length)
 }
 
 func (q *PaymentQueue) Close() {
-	close(q.ch)
-	q.wg.Wait()
+	// Para Redis não há um close na fila, então apenas marca closed
+	atomic.StoreInt32(&q.closed, 1)
 }
