@@ -1,42 +1,93 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
+	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"time"
 
-	"rinha/internal/core/domain"
-	"rinha/internal/core/service"
-	"rinha/internal/handlers"
-	"rinha/internal/infra/health"
-	httpserver "rinha/internal/infra/http"
-	"rinha/internal/infra/storage"
+	"github.com/bytedance/sonic"
+	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
+
+	"rinha/adapter"
+	"rinha/handler"
+	"rinha/model"
+	"rinha/utils"
 )
 
 func main() {
-	defaultURL := os.Getenv("PAYMENT_PROCESSOR_URL_DEFAULT")
-	fallbackURL := os.Getenv("PAYMENT_PROCESSOR_URL_FALLBACK")
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 
-	memStorage := storage.NewMemoryStorage()
-	healthChecker := health.NewChecker()
-
-	sender := func(url string, p domain.Payment) error {
-		body, _ := json.Marshal(p)
-		resp, err := http.Post(url+"/payments", "application/json", bytes.NewReader(body))
-		if err != nil || resp.StatusCode >= 500 {
-			return err
-		}
-		processor := "default"
-		if url == fallbackURL {
-			processor = "fallback"
-		}
-		memStorage.SavePayment(p, processor)
-		return nil
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:        512,
+			MaxIdleConnsPerHost: 128,
+			IdleConnTimeout:     120 * time.Second,
+			MaxConnsPerHost:     512,
+			DialContext: (&net.Dialer{
+				Timeout:   time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+		},
+		Timeout: 5 * time.Second,
 	}
 
-	paymentService := service.NewPaymentService(memStorage, healthChecker, sender, defaultURL, fallbackURL)
-	handler := handlers.NewHandler(*paymentService, memStorage)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: utils.GetEnvOrDefault("REDIS_ADDR", "localhost:6379"),
+	})
 
-	httpserver.StartServer(handler)
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		slog.Error("Redis failed", "err", err)
+		os.Exit(1)
+	}
+
+	retryQueue := make(chan model.PaymentRequestProcessor, 5000)
+	adapter := adapter.NewPaymentProcessorAdapter(
+		client,
+		rdb,
+		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_DEFAULT", "http://localhost:8001"),
+		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_FALLBACK", "http://localhost:8002"),
+		retryQueue,
+		500,
+	)
+
+	handler := handler.NewPaymentHandler(adapter)
+
+	app := fiber.New(fiber.Config{
+		JSONEncoder: sonic.Marshal,
+		JSONDecoder: sonic.Unmarshal,
+	})
+
+	app.Post("/payments", handler.Process)
+	app.Get("/payments-summary", handler.Summary)
+	app.Post("/purge-payments", handler.Purge)
+
+	adapter.StartWorkers()
+	adapter.EnableHealthCheck(utils.GetEnvOrDefault("MONITOR_HEALTH", "true"))
+
+	port := utils.GetEnvOrDefault("PORT", "9999")
+	banner := `
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣶⣶⣶⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⠟⠋⠙⠻⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡇⠀🐔⠀ ⢸⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣄⣀⣤⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+
+💥 RINHA DE BACKEND 2025 💥
+🥊 Lutador: Golang Beast v1
+🧠 Estratégia: Fallback, retry e muita mutexada
+📡 Arena aberta na porta ` + port + `
+
+👉 Que comece o massacre dos milisegundos!
+`
+
+	slog.Info(banner)
+
+	slog.Info("server running", "port", port)
+	if err := app.Listen(":" + port); err != nil {
+		slog.Error("server failed", "err", err)
+	}
 }
