@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   rinha_1:
-    build: .
+    image: joelgarciajr84/rinha-backend-go:latest
     init: true
     networks:
       - backend
@@ -20,10 +20,10 @@ services:
       resources:
         limits:
           cpus: "0.625"
-          memory: "300MB"
+          memory: "130MB"
 
   rinha_2:
-    build: .
+    image: joelgarciajr84/rinha-backend-go:latest
     init: true
     networks:
       - backend
@@ -41,7 +41,7 @@ services:
       resources:
         limits:
           cpus: "0.625"
-          memory: "300MB"
+          memory: "130MB"
 
   nginx:
     image: nginx:alpine
@@ -60,7 +60,7 @@ services:
       resources:
         limits:
           cpus: "0.15"
-          memory: "70MB"
+          memory: "50MB"
 
   redis:
     image: redis:7-alpine
@@ -79,7 +79,7 @@ services:
       resources:
         limits:
           cpus: "0.1"
-          memory: "50MB"
+          memory: "40MB"
     tmpfs:
       - /data
 
