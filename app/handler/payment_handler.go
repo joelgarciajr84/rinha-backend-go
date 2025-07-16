@@ -29,8 +29,12 @@ func (h *PaymentHandler) Process(c *fiber.Ctx) error {
 func (h *PaymentHandler) Summary(c *fiber.Ctx) error {
 	summary, err := h.adapter.Summary(c.Query("from"), c.Query("to"), c.Get("X-Rinha-Token", "123"))
 	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+		return c.Status(fiber.StatusOK).JSON(model.SummaryResponse{
+			DefaultSummary:  model.SummaryTotalRequestsResponse{},
+			FallbackSummary: model.SummaryTotalRequestsResponse{},
+		})
 	}
+
 	return c.JSON(summary)
 }
 
