@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   rinha_1:
@@ -16,6 +15,13 @@ services:
       - "9991:9999"
     depends_on:
       - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9999/payments-summary"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -37,6 +43,13 @@ services:
       - "9992:9999"
     depends_on:
       - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9999/payments-summary"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -47,7 +60,7 @@ services:
     image: nginx:alpine
     init: true
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx.conf:/etc/nginx/nginx.conf
     ports:
       - "9999:80"
     networks:
