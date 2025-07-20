@@ -44,14 +44,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	retryQueue := make(chan model.PaymentRequestProcessor, 5000)
+	retryQueue := make(chan model.PaymentRequestProcessor, 10000)
 	adapter := adapter.NewPaymentProcessorAdapter(
 		client,
 		rdb,
 		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_DEFAULT", "http://localhost:8001"),
 		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_FALLBACK", "http://localhost:8002"),
 		retryQueue,
-		500,
+		900,
 	)
 
 	handler := handler.NewPaymentHandler(adapter)
@@ -76,12 +76,8 @@ func main() {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣄⣀⣤⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
-💥 RINHA DE BACKEND 2025 💥
-🥊 Lutador: Golang Beast v1
-🧠 Estratégia: Fallback, retry e muita mutexada
-📡 Arena aberta na porta ` + port + `
-
-👉 Que comece o massacre dos milisegundos!
+💥 SOLUCAO RINHA DE BACKEND 2025 💥
+----- created by @joelgarciajr84 -----
 `
 
 	slog.Info(banner)
