@@ -76,12 +76,8 @@ func main() {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣄⣀⣤⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
-💥 RINHA DE BACKEND 2025 💥
-🥊 Lutador: Golang Beast v1
-🧠 Estratégia: Fallback, retry e muita mutexada
-📡 Arena aberta na porta ` + port + `
-
-👉 Que comece o massacre dos milisegundos!
+💥 SOLUCAO RINHA DE BACKEND 2025 💥
+----- created by @joelgarciajr84 -----
 `
 
 	slog.Info(banner)
