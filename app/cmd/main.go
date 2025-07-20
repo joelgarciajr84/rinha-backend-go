@@ -44,14 +44,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	retryQueue := make(chan model.PaymentRequestProcessor, 5000)
+	retryQueue := make(chan model.PaymentRequestProcessor, 10000)
 	adapter := adapter.NewPaymentProcessorAdapter(
 		client,
 		rdb,
 		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_DEFAULT", "http://localhost:8001"),
 		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_FALLBACK", "http://localhost:8002"),
 		retryQueue,
-		500,
+		900,
 	)
 
 	handler := handler.NewPaymentHandler(adapter)

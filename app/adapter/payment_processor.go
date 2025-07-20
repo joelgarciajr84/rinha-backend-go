@@ -206,7 +206,7 @@ func (a *PaymentProcessorAdapter) StartWorkers() {
 	for i := 0; i < a.workers; i++ {
 		go func() {
 			for p := range a.retryQueue {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(40 * time.Millisecond)
 				a.Process(p)
 			}
 		}()
