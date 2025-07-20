@@ -69,14 +69,16 @@ func (a *PaymentProcessorAdapter) Process(payment model.PaymentRequestProcessor)
 
 func (a *PaymentProcessorAdapter) innerProcess(payment model.PaymentRequestProcessor) error {
 	a.mu.RLock()
-	defer a.mu.RUnlock()
+	defStatus := a.healthStatus.Default
+	fallStatus := a.healthStatus.Fallback
+	a.mu.RUnlock()
 
-	if !a.healthStatus.Default.Failing && a.healthStatus.Default.MinResponseTime < 300 {
+	if !defStatus.Failing && defStatus.MinResponseTime < 300 {
 		if err := a.sendPayment(payment, a.defaultUrl+"/payments", 200*time.Millisecond); err == nil {
 			return nil
 		}
 	}
-	if !a.healthStatus.Fallback.Failing && a.healthStatus.Fallback.MinResponseTime < 100 {
+	if !fallStatus.Failing && fallStatus.MinResponseTime < 100 {
 		if err := a.sendPayment(payment, a.fallbackUrl+"/payments", 100*time.Millisecond); err == nil {
 			return nil
 		}
