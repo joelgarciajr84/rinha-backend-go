@@ -51,7 +51,7 @@ func main() {
 		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_DEFAULT", "http://localhost:8001"),
 		utils.GetEnvOrDefault("PAYMENT_PROCESSOR_URL_FALLBACK", "http://localhost:8002"),
 		retryQueue,
-		900,
+		770,
 	)
 
 	handler := handler.NewPaymentHandler(adapter)
@@ -76,7 +76,7 @@ func main() {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣄⣀⣤⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
-💥 SOLUCAO RINHA DE BACKEND 2025 💥
+💥 rinhazona da massa!!! 💥
 ----- created by @joelgarciajr84 -----
 `
 

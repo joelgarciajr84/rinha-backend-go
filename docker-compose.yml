@@ -1,8 +1,7 @@
 
 services:
   rinha_1:
-    image: joelgarciajr84/rinha-backend-go:latest
-    build: .
+    image: joelgarciajr84/rinha-backend-go:rinha-2025
     init: true
     networks:
       - backend
@@ -30,8 +29,7 @@ services:
           memory: "130MB"
 
   rinha_2:
-    image: joelgarciajr84/rinha-backend-go:latest
-    build: .
+    image: joelgarciajr84/rinha-backend-go:rinha-2025
     init: true
     networks:
       - backend
