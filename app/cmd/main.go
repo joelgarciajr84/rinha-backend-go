@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 
+	"log/slog"
 	"rinha/adapter"
 	"rinha/handler"
 	"rinha/model"
@@ -20,6 +20,7 @@ import (
 
 func main() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
+	slog.Info("STARTING RINHA BACKEND")
 
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -38,6 +39,7 @@ func main() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: utils.GetEnvOrDefault("REDIS_ADDR", "localhost:6379"),
 	})
+	slog.Info("Connecting to Redis", "addr", rdb.Options().Addr)
 
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		slog.Error("Redis failed", "err", err)
@@ -69,20 +71,9 @@ func main() {
 	adapter.EnableHealthCheck(utils.GetEnvOrDefault("MONITOR_HEALTH", "true"))
 
 	port := utils.GetEnvOrDefault("PORT", "9999")
-	banner := `
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣶⣶⣶⣤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⠟⠋⠙⠻⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡇⠀🐔⠀ ⢸⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣄⣀⣤⣾⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 
-💥 rinhazona da massa!!! 💥
------ created by @joelgarciajr84 -----
-`
+	slog.Info("Starting server", "port", port)
 
-	slog.Info(banner)
-
-	slog.Info("server running", "port", port)
 	if err := app.Listen(":" + port); err != nil {
 		slog.Error("server failed", "err", err)
 	}
