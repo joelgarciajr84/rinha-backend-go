@@ -1,7 +1,7 @@
 
 services:
   rinha_1:
-    image: joelgarciajr84/rinha-backend-go:rinha-2025
+    image: joelgarciajr84/rinha-backend-go:rinha-back-2025
     init: true
     networks:
       - backend
@@ -11,6 +11,7 @@ services:
       - PAYMENT_PROCESSOR_URL_FALLBACK=http://payment-processor-fallback:8080
       - X_RINHA_TOKEN=123
       - REDIS_ADDR=redis:6379
+      - MONITOR_HEALTH=true
     ports:
       - "9991:9999"
     depends_on:
@@ -21,15 +22,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 5s
     deploy:
       resources:
         limits:
           cpus: "0.625"
-          memory: "130MB"
+          memory: "120MB"
 
   rinha_2:
-    image: joelgarciajr84/rinha-backend-go:rinha-2025
+    image: joelgarciajr84/rinha-backend-go:rinha-back-2025
     init: true
     networks:
       - backend
@@ -39,6 +39,7 @@ services:
       - PAYMENT_PROCESSOR_URL_FALLBACK=http://payment-processor-fallback:8080
       - X_RINHA_TOKEN=123
       - REDIS_ADDR=redis:6379
+      - MONITOR_HEALTH=true
     ports:
       - "9992:9999"
     depends_on:
@@ -49,12 +50,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 5s
     deploy:
       resources:
         limits:
           cpus: "0.625"
-          memory: "130MB"
+          memory: "120MB"
 
   nginx:
     image: nginx:alpine
@@ -65,7 +65,9 @@ services:
       - "9999:80"
     networks:
       - backend
+      - payment-processor
     depends_on:
+      - redis
       - rinha_1
       - rinha_2
     restart: unless-stopped
@@ -81,18 +83,18 @@ services:
       - "6379:6379"
     networks:
       - backend
+      - payment-processor
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
-      start_period: 10s
     deploy:
       resources:
         limits:
           cpus: "0.1"
-          memory: "40MB"
+          memory: "60MB"
     tmpfs:
       - /data
 

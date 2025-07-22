@@ -28,6 +28,8 @@ type PaymentProcessorAdapter struct {
 }
 
 func NewPaymentProcessorAdapter(client *http.Client, db *redis.Client, defaultUrl, fallbackUrl string, retryQueue chan model.PaymentRequestProcessor, workers int) *PaymentProcessorAdapter {
+	slog.Info("Creating PaymentProcessorAdapter", "defaultUrl", defaultUrl, "fallbackUrl", fallbackUrl)
+
 	return &PaymentProcessorAdapter{
 		client: client,
 		db:     db,
