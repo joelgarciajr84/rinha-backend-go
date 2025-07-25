@@ -1,0 +1,9 @@
+{
+  "name": "Joel Garcia Jr",
+  "social": ["https://github.com/joelgarciajr84"],
+  "source-code-repo": "https://github.com/joelgarciajr84/rinha-backend-go",
+  "langs": ["go"],
+  "storages": ["postgresql"],
+  "load-balancers": ["nginx"],
+  "other-technologies": ["fiber", "sonic"]
+}
