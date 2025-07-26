@@ -137,8 +137,6 @@ func (h *HealthMonitor) GetBestProcessor() ProcessorType {
 	primaryHealth, _ := h.GetHealthStatus(Primary)
 	fallbackHealth, _ := h.GetHealthStatus(Fallback)
 
-
-
 	if primaryHealth.Available {
 		return Primary
 	}

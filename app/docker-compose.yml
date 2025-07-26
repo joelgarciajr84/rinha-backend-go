@@ -1,3 +1,4 @@
+
 services:
   financial-db:
     image: postgres:alpine
@@ -17,14 +18,13 @@ services:
       resources:
         limits:
           cpus: "0.4"
-          memory: "150MB"
+          memory: "173MB"
     command: postgres -c 'max_connections=300' -c 'shared_buffers=64MB' -c 'effective_cache_size=100MB' -c 'maintenance_work_mem=16MB' -c 'checkpoint_completion_target=0.9' -c 'wal_buffers=8MB' -c 'default_statistics_target=100' -c 'random_page_cost=1.1' -c 'effective_io_concurrency=200'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U root -d transactions"]
       interval: 5s
       timeout: 5s
       retries: 5
-      
 
   transaction-api-01: &api
     build: .
@@ -59,10 +59,7 @@ services:
       resources:
         limits:
           cpus: "0.45"
-          memory: "64MB"
-        reservations:
-          cpus: "0.4"
-          memory: "48MB"
+          memory: "83MB"
 
   transaction-api-02:
     <<: *api
@@ -86,10 +83,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: "24MB"
-        reservations:
-          cpus: "0.15"
-          memory: "16MB"
+          memory: "10MB"
     ulimits:
       nofile:
         soft: 8192
@@ -103,4 +97,3 @@ networks:
       com.docker.network.bridge.enable_ip_masquerade: 'false'
   payment-processor:
     external: true
-  
