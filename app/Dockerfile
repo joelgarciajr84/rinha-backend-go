@@ -1,39 +1,20 @@
-
-FROM golang:1.23-alpine AS builder
-
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
-
-RUN apk add --no-cache gcc musl-dev
-
 COPY go.mod go.sum ./
 RUN go mod download
-
-COPY ./src ./src
-
+COPY ./ /app
 ENV GOFLAGS="-buildvcs=false"
 
-RUN go build -trimpath \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
     -ldflags="-s -w" \
-    -o /app/transaction-processor ./src
+    -o galo .
+RUN apk add --no-cache file
+RUN file galo
 
-
-FROM alpine:3.19
-
-
-RUN apk --no-cache add ca-certificates tzdata
-
-RUN adduser -D -g '' appuser
-
-USER appuser
-WORKDIR /app
-
-COPY --from=builder /app/transaction-processor .
-
+FROM alpine:latest
+COPY --from=builder /app/galo /usr/local/bin/
+RUN chmod +x /usr/local/bin/galo
 ENV GOMEMLIMIT=64MiB \
     GOGC=100 \
-    GOMAXPROCS=1 \
-    TZ=UTC
-
-EXPOSE 8080
-
-ENTRYPOINT ["./transaction-processor"]
+    GOMAXPROCS=1
+CMD ["galo"]
