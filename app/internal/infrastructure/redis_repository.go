@@ -27,10 +27,10 @@ func NewRedisMetricsRepository(redisURL string) *RedisMetricsRepository {
 	}
 }
 
-func (r *RedisMetricsRepository) StoreTransactionData(processorType string, transaction domain.TransactionRequest) error {
-	ctx := context.Background()
+var ctx = context.Background() // fora do método
 
-	timestamp, err := time.Parse("2006-01-02T15:04:05.000Z07:00", transaction.SubmittedAt)
+func (r *RedisMetricsRepository) StoreTransactionData(processorType string, transaction domain.TransactionRequest) error {
+	timestamp, err := time.Parse(time.RFC3339Nano, transaction.SubmittedAt)
 	if err != nil {
 		return fmt.Errorf("erro ao converter timestamp: %w", err)
 	}
@@ -45,8 +45,7 @@ func (r *RedisMetricsRepository) StoreTransactionData(processorType string, tran
 		Member: transaction.IdentificationCode,
 	})
 
-	_, err = pipeline.Exec(ctx)
-	if err != nil {
+	if _, err := pipeline.Exec(ctx); err != nil {
 		return fmt.Errorf("erro ao executar pipeline Redis: %w", err)
 	}
 

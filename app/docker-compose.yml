@@ -1,5 +1,8 @@
 x-template: &template
-  image: joelgarciajr84/rinha-backend-go:rinha-redis-galo-de-briga
+  image: joelgarciajr84/rinha-backend-go:rinha-redis-galo2-de-briga
+  build: 
+    context: .
+    dockerfile: Dockerfile
   environment:
     PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
     PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"

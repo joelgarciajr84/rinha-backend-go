@@ -24,10 +24,10 @@ func NewTransactionController(
 }
 
 func (c *TransactionController) HandleTransactionSubmission(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+	// if r.Method != http.MethodPost {
+	// 	w.WriteHeader(http.StatusMethodNotAllowed)
+	// 	return
+	// }
 
 	var transactionRequest domain.TransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&transactionRequest); err != nil {
@@ -35,10 +35,10 @@ func (c *TransactionController) HandleTransactionSubmission(w http.ResponseWrite
 		return
 	}
 
-	if !c.transactionHandler.IsQueueAvailable() {
-		w.WriteHeader(http.StatusTooManyRequests)
-		return
-	}
+	// if !c.transactionHandler.IsQueueAvailable() {
+	// 	w.WriteHeader(http.StatusTooManyRequests)
+	// 	return
+	// }
 
 	if err := c.transactionHandler.SubmitTransaction(transactionRequest); err != nil {
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -49,10 +49,10 @@ func (c *TransactionController) HandleTransactionSubmission(w http.ResponseWrite
 }
 
 func (c *TransactionController) HandleMetricsQuery(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+	// if r.Method != http.MethodGet {
+	// 	w.WriteHeader(http.StatusMethodNotAllowed)
+	// 	return
+	// }
 
 	timeRange := c.parseTimeRangeFromQuery(r)
 	metrics := c.metricsAnalyzer.GenerateTransactionReport(timeRange)
