@@ -17,9 +17,13 @@ type RedisMetricsRepository struct {
 
 func NewRedisMetricsRepository(redisURL string) *RedisMetricsRepository {
 	client := redis.NewClient(&redis.Options{
-		Addr:     redisURL,
-		Password: "",
-		DB:       0,
+		Addr:         redisURL,
+		Password:     "",
+		DB:           0,
+		PoolSize:     10,
+		MinIdleConns: 1,
+		PoolTimeout:  60 * time.Second,
+		MaxRetries:   3,
 	})
 
 	return &RedisMetricsRepository{
@@ -27,7 +31,7 @@ func NewRedisMetricsRepository(redisURL string) *RedisMetricsRepository {
 	}
 }
 
-var ctx = context.Background() // fora do método
+var ctx = context.Background()
 
 func (r *RedisMetricsRepository) StoreTransactionData(processorType string, transaction domain.TransactionRequest) error {
 	timestamp, err := time.Parse(time.RFC3339Nano, transaction.SubmittedAt)

@@ -24,21 +24,12 @@ func NewTransactionController(
 }
 
 func (c *TransactionController) HandleTransactionSubmission(w http.ResponseWriter, r *http.Request) {
-	// if r.Method != http.MethodPost {
-	// 	w.WriteHeader(http.StatusMethodNotAllowed)
-	// 	return
-	// }
 
 	var transactionRequest domain.TransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&transactionRequest); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	// if !c.transactionHandler.IsQueueAvailable() {
-	// 	w.WriteHeader(http.StatusTooManyRequests)
-	// 	return
-	// }
 
 	if err := c.transactionHandler.SubmitTransaction(transactionRequest); err != nil {
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -49,10 +40,6 @@ func (c *TransactionController) HandleTransactionSubmission(w http.ResponseWrite
 }
 
 func (c *TransactionController) HandleMetricsQuery(w http.ResponseWriter, r *http.Request) {
-	// if r.Method != http.MethodGet {
-	// 	w.WriteHeader(http.StatusMethodNotAllowed)
-	// 	return
-	// }
 
 	timeRange := c.parseTimeRangeFromQuery(r)
 	metrics := c.metricsAnalyzer.GenerateTransactionReport(timeRange)
@@ -69,15 +56,8 @@ func (c *TransactionController) parseTimeRangeFromQuery(r *http.Request) domain.
 	fromParam := r.URL.Query().Get("from")
 	toParam := r.URL.Query().Get("to")
 
-	startTime, err1 := time.Parse(time.RFC3339, fromParam)
-	endTime, err2 := time.Parse(time.RFC3339, toParam)
-
-	if fromParam == "" || toParam == "" || err1 != nil || err2 != nil {
-		return domain.TimeRange{
-			StartTime: time.Unix(0, 0).UTC(),
-			EndTime:   time.Now().UTC(),
-		}
-	}
+	startTime, _ := time.Parse(time.RFC3339, fromParam)
+	endTime, _ := time.Parse(time.RFC3339, toParam)
 
 	return domain.TimeRange{
 		StartTime: startTime,

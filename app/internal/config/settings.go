@@ -22,8 +22,8 @@ func LoadEnvironmentConfig() *ApplicationSettings {
 		ServerPort:           getEnvironmentVariable("PORT", ":9999"),
 		RedisConnectionURL:   getEnvironmentVariable("REDIS_URL", "127.0.0.1:6379"),
 		WorkerPoolSize:       getIntegerEnvironmentVariable("WORKERS", 20),
-		QueueCapacity:        100000,
-		ConcurrencyLimit:     20,
+		QueueCapacity:        200000,
+		ConcurrencyLimit:     200000,
 	}
 }
 

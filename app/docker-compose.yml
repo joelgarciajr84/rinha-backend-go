@@ -1,5 +1,5 @@
 x-template: &template
-  image: joelgarciajr84/rinha-backend-go:rinha-redis-galo2-de-briga
+  # image: joelgarciajr84/rinha-backend-go:rinha-redis-galo2-de-briga
   build: 
     context: .
     dockerfile: Dockerfile

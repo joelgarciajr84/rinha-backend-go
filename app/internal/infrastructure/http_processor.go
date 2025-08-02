@@ -7,7 +7,6 @@ import (
 	"galo/internal/domain"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type HTTPTransactionProcessor struct {
@@ -20,9 +19,9 @@ type HTTPTransactionProcessor struct {
 
 func NewHTTPTransactionProcessor(primaryURL, fallbackURL string, maxConcurrency int) *HTTPTransactionProcessor {
 	transport := &http.Transport{
-		MaxIdleConns:        1000,
-		MaxIdleConnsPerHost: 1000,
-		IdleConnTimeout:     60 * time.Second,
+		MaxIdleConns:        0,
+		MaxIdleConnsPerHost: 0,
+		IdleConnTimeout:     0,
 		DisableCompression:  false,
 		ForceAttemptHTTP2:   true,
 	}
