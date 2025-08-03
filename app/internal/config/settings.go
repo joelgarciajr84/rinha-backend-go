@@ -21,8 +21,8 @@ func LoadEnvironmentConfig() *ApplicationSettings {
 		FallbackProcessorURL: getEnvironmentVariable("PAYMENT_PROCESSOR_FALLBACK_URL", "http://localhost:8002"),
 		ServerPort:           getEnvironmentVariable("PORT", ":9999"),
 		RedisConnectionURL:   getEnvironmentVariable("REDIS_URL", "127.0.0.1:6379"),
-		WorkerPoolSize:       getIntegerEnvironmentVariable("WORKERS", 20),
-		QueueCapacity:        200000,
+		WorkerPoolSize:       getIntegerEnvironmentVariable("WORKERS", 21),
+		QueueCapacity:        12000,
 		ConcurrencyLimit:     200000,
 	}
 }

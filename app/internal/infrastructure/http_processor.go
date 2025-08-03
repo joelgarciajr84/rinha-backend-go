@@ -7,6 +7,7 @@ import (
 	"galo/internal/domain"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type HTTPTransactionProcessor struct {
@@ -19,24 +20,49 @@ type HTTPTransactionProcessor struct {
 
 func NewHTTPTransactionProcessor(primaryURL, fallbackURL string, maxConcurrency int) *HTTPTransactionProcessor {
 	transport := &http.Transport{
-		MaxIdleConns:        0,
-		MaxIdleConnsPerHost: 0,
-		IdleConnTimeout:     0,
-		DisableCompression:  false,
-		ForceAttemptHTTP2:   true,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   100,
+		IdleConnTimeout:       90 * time.Second,
+		DisableKeepAlives:     false,
+		DisableCompression:    true,
+		ForceAttemptHTTP2:     false,
+		ExpectContinueTimeout: 0,
+	}
+
+	client := &http.Client{
+		Timeout:   3 * time.Second,
+		Transport: transport,
 	}
 
 	return &HTTPTransactionProcessor{
-		httpClient: &http.Client{
-			Timeout:   0,
-			Transport: transport,
-		},
+		httpClient:         client,
 		primaryURL:         primaryURL,
 		fallbackURL:        fallbackURL,
 		concurrencyLimiter: make(chan struct{}, maxConcurrency),
 		currentURL:         primaryURL,
 	}
 }
+
+// func NewHTTPTransactionProcessor(primaryURL, fallbackURL string, maxConcurrency int) *HTTPTransactionProcessor {
+// 	transport := &http.Transport{
+// 		MaxIdleConns:        0,
+// 		MaxIdleConnsPerHost: 0,
+// 		IdleConnTimeout:     0,
+// 		DisableCompression:  false,
+// 		ForceAttemptHTTP2:   true,
+// 	}
+
+// 	return &HTTPTransactionProcessor{
+// 		httpClient: &http.Client{
+// 			Timeout:   0,
+// 			Transport: transport,
+// 		},
+// 		primaryURL:         primaryURL,
+// 		fallbackURL:        fallbackURL,
+// 		concurrencyLimiter: make(chan struct{}, maxConcurrency),
+// 		currentURL:         primaryURL,
+// 	}
+// }
 
 func (p *HTTPTransactionProcessor) ExecuteTransaction(request domain.TransactionRequest) domain.ProcessingResult {
 
