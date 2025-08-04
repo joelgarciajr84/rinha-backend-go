@@ -60,6 +60,6 @@ func main() {
 		serverPort = ":" + serverPort
 	}
 
-	fmt.Printf("GALO DE BRIGA NA PORTA %s\n", serverPort)
+	fmt.Printf("GALAO DE BRIGA NA PORTA %s\n", serverPort)
 	log.Fatal(http.ListenAndServe(serverPort, nil))
 }

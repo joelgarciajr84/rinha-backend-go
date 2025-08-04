@@ -38,14 +38,14 @@ func (h *TransactionHandler) ProcessTransaction(request domain.TransactionReques
 
 	h.transactionProcessor.SetProcessorURL(true)
 	processed := false
-	for attempt := 0; attempt < 5; attempt++ {
+	for range 5 {
 		result := h.transactionProcessor.ExecuteTransaction(request)
 		if result.Success {
 			h.storeTransactionMetrics("default", request)
 			processed = true
 			break
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(3 * time.Millisecond)
 	}
 
 	if !processed {
