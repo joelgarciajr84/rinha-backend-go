@@ -56,11 +56,28 @@ func (c *TransactionController) parseTimeRangeFromQuery(r *http.Request) domain.
 	fromParam := r.URL.Query().Get("from")
 	toParam := r.URL.Query().Get("to")
 
-	startTime, _ := time.Parse(time.RFC3339, fromParam)
-	endTime, _ := time.Parse(time.RFC3339, toParam)
-
-	return domain.TimeRange{
-		StartTime: startTime,
-		EndTime:   endTime,
+	parse := func(s string) (time.Time, bool) {
+		if s == "" {
+			return time.Time{}, false
+		}
+		// aceita qualquer precisão fracionária
+		if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+			return t, true
+		}
+		// fallback: RFC3339 “puro”
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			return t, true
+		}
+		return time.Time{}, false
 	}
+
+	var start, end time.Time
+	if t, ok := parse(fromParam); ok {
+		start = t
+	}
+	if t, ok := parse(toParam); ok {
+		end = t
+	}
+
+	return domain.TimeRange{StartTime: start, EndTime: end}
 }

@@ -1,5 +1,8 @@
 x-template: &template
-  image: joelgarciajr84/rinha-backend-go:rinha-redis-galo4-de-briga
+  # image: joelgarciajr84/rinha-backend-go:rinha-redis-galo6-de-briga
+  build:
+    context: .
+    dockerfile: Dockerfile
   environment:
     PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
     PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
@@ -15,14 +18,14 @@ x-template: &template
         memory: "115MB"
 
 services:
-  galo01:
+  galo_01:
     <<: *template
-    hostname: galo01
+    hostname: galo_01
     depends_on:
       - redis
-  galo02:
+  galo_02:
     <<: *template
-    hostname: galo02
+    hostname: galo_02
     depends_on:
       - redis
   
@@ -33,8 +36,8 @@ services:
     ports:
       - "9999:80"
     depends_on:
-      - galo01
-      - galo02
+      - galo_01
+      - galo_02
     networks:
       - backend
     deploy:
@@ -44,18 +47,28 @@ services:
           memory: "70MB"
   redis:
     image: redis:8.0.3-alpine
-    hostname: redis
-    networks:
-      - backend
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    networks: [backend]
+    ulimits:
+      nofile: 262144
     deploy:
       resources:
         limits:
-          cpus: "0.3"
-          memory: "50MB"
+          cpus: "0.40"
+          memory: "55MB"
+    command:
+      - redis-server
+      - --save
+      - ""                 
+      - --appendonly
+      - "no"               
+      - --maxmemory
+      - "48mb"
+      - --maxmemory-policy
+      - allkeys-lru
+      - --latency-monitor-threshold
+      - "0"
 networks:
   backend:
+    driver: bridge
   payment-processor:
     external: true

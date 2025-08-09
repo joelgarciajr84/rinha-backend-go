@@ -15,74 +15,39 @@ type HTTPTransactionProcessor struct {
 	primaryURL         string
 	fallbackURL        string
 	concurrencyLimiter chan struct{}
-	currentURL         string
 }
 
 func NewHTTPTransactionProcessor(primaryURL, fallbackURL string, maxConcurrency int) *HTTPTransactionProcessor {
 	transport := &http.Transport{
-		MaxIdleConns:          100,
-		MaxIdleConnsPerHost:   100,
-		IdleConnTimeout:       90 * time.Second,
-		DisableKeepAlives:     false,
-		DisableCompression:    true,
-		ForceAttemptHTTP2:     false,
-		ExpectContinueTimeout: 0,
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100,
+		IdleConnTimeout:     90 * time.Second,
+		DisableKeepAlives:   false,
+		DisableCompression:  true,
+		ForceAttemptHTTP2:   false,
 	}
-
-	client := &http.Client{
-		Timeout:   3 * time.Second,
-		Transport: transport,
-	}
-
+	client := &http.Client{Timeout: 10 * time.Second, Transport: transport}
 	return &HTTPTransactionProcessor{
 		httpClient:         client,
 		primaryURL:         primaryURL,
 		fallbackURL:        fallbackURL,
 		concurrencyLimiter: make(chan struct{}, maxConcurrency),
-		currentURL:         primaryURL,
 	}
 }
 
-// func NewHTTPTransactionProcessor(primaryURL, fallbackURL string, maxConcurrency int) *HTTPTransactionProcessor {
-// 	transport := &http.Transport{
-// 		MaxIdleConns:        0,
-// 		MaxIdleConnsPerHost: 0,
-// 		IdleConnTimeout:     0,
-// 		DisableCompression:  false,
-// 		ForceAttemptHTTP2:   true,
-// 	}
-
-// 	return &HTTPTransactionProcessor{
-// 		httpClient: &http.Client{
-// 			Timeout:   0,
-// 			Transport: transport,
-// 		},
-// 		primaryURL:         primaryURL,
-// 		fallbackURL:        fallbackURL,
-// 		concurrencyLimiter: make(chan struct{}, maxConcurrency),
-// 		currentURL:         primaryURL,
-// 	}
-// }
-
-func (p *HTTPTransactionProcessor) ExecuteTransaction(request domain.TransactionRequest) domain.ProcessingResult {
-
+func (p *HTTPTransactionProcessor) ExecuteTransaction(request domain.TransactionRequest, usePrimary bool) domain.ProcessingResult {
 	p.concurrencyLimiter <- struct{}{}
 	defer func() { <-p.concurrencyLimiter }()
 
-	success := p.sendTransactionRequest(request, p.currentURL)
-
-	return domain.ProcessingResult{
-		Success:   success,
-		Processor: p.determineProcessorType(p.currentURL),
+	baseURL := p.primaryURL
+	proc := "default"
+	if !usePrimary {
+		baseURL = p.fallbackURL
+		proc = "fallback"
 	}
-}
 
-func (p *HTTPTransactionProcessor) SetProcessorURL(usePrimary bool) {
-	if usePrimary {
-		p.currentURL = p.primaryURL
-	} else {
-		p.currentURL = p.fallbackURL
-	}
+	ok := p.sendTransactionRequest(request, baseURL)
+	return domain.ProcessingResult{Success: ok, Processor: domain.ProcessorType(proc)}
 }
 
 func (p *HTTPTransactionProcessor) GetPrimaryURL() string {
@@ -122,11 +87,4 @@ func (p *HTTPTransactionProcessor) sendTransactionRequest(request domain.Transac
 	defer response.Body.Close()
 
 	return response.StatusCode == http.StatusOK
-}
-
-func (p *HTTPTransactionProcessor) determineProcessorType(url string) string {
-	if url == p.primaryURL {
-		return "primary"
-	}
-	return "fallback"
 }

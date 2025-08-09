@@ -9,11 +9,20 @@ var (
 	ErrQueueFull = errors.New("fila de transações está cheia")
 )
 
+// ProcessorType representa o destino do processamento.
+// Use sempre DefaultProcessor / FallbackProcessor.
+type ProcessorType string
+
+const (
+	DefaultProcessor  ProcessorType = "default"
+	FallbackProcessor ProcessorType = "fallback"
+)
+
 type TransactionRequest struct {
-	IdentificationCode string    `json:"correlationId"`
-	MonetaryValue      float64   `json:"amount"`
-	SubmittedAt        string    `json:"requestedAt"`
-	ProcessedAt        time.Time `json:"-"`
+	IdentificationCode string    `json:"correlationId"` // UUID vindo do cliente
+	MonetaryValue      float64   `json:"amount"`        // valor em decimal (será convertido p/ centavos no repo)
+	SubmittedAt        string    `json:"requestedAt"`   // RFC3339Nano (string para casar com a API do PP)
+	ProcessedAt        time.Time `json:"-"`             // interno, não serializa
 }
 
 type MetricsData struct {
@@ -26,9 +35,10 @@ type TransactionMetrics struct {
 	SecondaryProcessor MetricsData `json:"fallback"`
 }
 
+// ProcessingResult agora usa o tipo forte; Success indica 2xx do PP.
 type ProcessingResult struct {
 	Success   bool
-	Processor string
+	Processor ProcessorType
 	Error     error
 }
 

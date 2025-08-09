@@ -16,7 +16,6 @@ func main() {
 	settings := config.LoadEnvironmentConfig()
 
 	metricsRepository := infrastructure.NewRedisMetricsRepository(settings.RedisConnectionURL)
-
 	metricsAnalyzer := usecase.NewMetricsAnalyzer(metricsRepository)
 
 	if err := metricsAnalyzer.InitializeSystem(); err != nil {
@@ -44,7 +43,6 @@ func main() {
 		transactionHandler,
 		queueManager,
 	)
-
 	workerPool.StartProcessing()
 
 	transactionController := interfaces.NewTransactionController(
@@ -52,9 +50,11 @@ func main() {
 		metricsAnalyzer,
 	)
 
+	// Rotas
 	http.HandleFunc("/payments", transactionController.HandleTransactionSubmission)
 	http.HandleFunc("/payments-summary", transactionController.HandleMetricsQuery)
 
+	// Porta
 	serverPort := settings.ServerPort
 	if !strings.HasPrefix(serverPort, ":") {
 		serverPort = ":" + serverPort

@@ -1,12 +1,7 @@
 package domain
 
 type TransactionProcessor interface {
-	ExecuteTransaction(request TransactionRequest) ProcessingResult
-}
-
-type ConfigurableProcessor interface {
-	TransactionProcessor
-	SetProcessorURL(usePrimary bool)
+	ExecuteTransaction(request TransactionRequest, usePrimary bool) ProcessingResult
 }
 
 type MetricsRepository interface {
