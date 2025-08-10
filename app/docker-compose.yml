@@ -1,16 +1,12 @@
 x-template: &template
-  # image: joelgarciajr84/rinha-backend-go:rinha-redis-galo6-de-briga
-  build:
-    context: .
-    dockerfile: Dockerfile
+  image: joelgarciajr84/rinha-backend-go@sha256:13efc7421cf82d269315cc5465766309a34b0e17fd06c10689250c0ea44d61cc
+  platform: linux/amd64
   environment:
     PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
     PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
     REDIS_URL: "redis:6379"
     PORT: 80
-  networks:
-    - backend
-    - payment-processor
+  networks: [backend, payment-processor]
   deploy:
     resources:
       limits:
@@ -21,35 +17,37 @@ services:
   galo_01:
     <<: *template
     hostname: galo_01
-    depends_on:
-      - redis
+    restart: unless-stopped
+    depends_on: [redis]
+
   galo_02:
     <<: *template
     hostname: galo_02
-    depends_on:
-      - redis
-  
+    restart: unless-stopped
+    depends_on: [redis]
+
   nginx:
     image: nginx
+    platform: linux/amd64
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "9999:80"
-    depends_on:
-      - galo_01
-      - galo_02
-    networks:
-      - backend
+    networks: [backend]
+    restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: "70MB"
+          cpus: "0.1"    # <= ajustado
+          memory: "65MB" # <= ajustado
+
   redis:
     image: redis:8.0.3-alpine
+    platform: linux/amd64
     networks: [backend]
     ulimits:
       nofile: 262144
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -58,15 +56,16 @@ services:
     command:
       - redis-server
       - --save
-      - ""                 
+      - ""
       - --appendonly
-      - "no"               
+      - "no"
       - --maxmemory
       - "48mb"
       - --maxmemory-policy
       - allkeys-lru
       - --latency-monitor-threshold
       - "0"
+
 networks:
   backend:
     driver: bridge

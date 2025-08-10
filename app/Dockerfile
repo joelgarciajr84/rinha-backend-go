@@ -1,6 +1,9 @@
 
 FROM golang:1.24-alpine AS builder
 
+ARG BUILD_COMMIT
+RUN echo "Commit: ${BUILD_COMMIT}" > /commit.txt
+
 WORKDIR /app
 
 COPY go.mod go.sum ./

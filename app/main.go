@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	var BuildCommit string
 	settings := config.LoadEnvironmentConfig()
 
 	metricsRepository := infrastructure.NewRedisMetricsRepository(settings.RedisConnectionURL)
@@ -61,5 +62,7 @@ func main() {
 	}
 
 	fmt.Printf("GALAO DE BRIGA NA PORTA %s\n", serverPort)
+	fmt.Printf("Starting Galo  commit %s\n", BuildCommit)
+
 	log.Fatal(http.ListenAndServe(serverPort, nil))
 }
