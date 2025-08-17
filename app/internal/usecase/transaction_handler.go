@@ -45,7 +45,7 @@ func (h *TransactionHandler) ProcessTransaction(request domain.TransactionReques
 			processed = true
 			break
 		}
-		time.Sleep(3 * time.Millisecond)
+		//time.Sleep(1 * time.Millisecond)
 	}
 
 	if !processed {
@@ -53,6 +53,11 @@ func (h *TransactionHandler) ProcessTransaction(request domain.TransactionReques
 		result := h.transactionProcessor.ExecuteTransaction(request)
 		if result.Success {
 			h.storeTransactionMetrics("fallback", request)
+			return
+		} else {
+			// coloca na fila novamente
+			h.queueManager.EnqueueTransaction(request)
+			return
 		}
 	}
 }

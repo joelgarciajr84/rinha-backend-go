@@ -20,8 +20,8 @@ type HTTPTransactionProcessor struct {
 
 func NewHTTPTransactionProcessor(primaryURL, fallbackURL string, maxConcurrency int) *HTTPTransactionProcessor {
 	transport := &http.Transport{
-		MaxIdleConns:          100,
-		MaxIdleConnsPerHost:   100,
+		MaxIdleConns:          2,
+		MaxIdleConnsPerHost:   2,
 		IdleConnTimeout:       90 * time.Second,
 		DisableKeepAlives:     false,
 		DisableCompression:    true,
